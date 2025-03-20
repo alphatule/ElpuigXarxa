@@ -27,8 +27,8 @@
     <fragment
         android:id="@+id/homeFragment"
         android:name="com.alex.elpuigxarxa.HomeFragment"
-        android:label="fragment_home2"
-        tools:layout="@layout/fragment_home2" />
+        android:label="fragment_home"
+        tools:layout="@layout/fragment_home" />
     <fragment
         android:id="@+id/newPostFragment"
         android:name="com.alex.elpuigxarxa.NewPostFragment"

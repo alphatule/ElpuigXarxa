@@ -158,24 +158,24 @@ public class HomeFragment extends Fragment {
         DocumentList<Map<String,Object>> lista = null;
         @NonNull
         @Override
-        public PostViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int
-                viewType) {
-            return new
-                    PostViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.viewholder_post, parent, false));
+        public PostViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            return new PostViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.viewholder_post, parent, false));
         }
         @Override
         public void onBindViewHolder(@NonNull PostViewHolder holder, int position) {
-            Map<String,Object> post =
-                    lista.getDocuments().get(position).getData();
-            if (post.get("authorPhotoUrl") == null)
-            {
-                holder.authorPhotoImageView.setImageResource(R.drawable.user);
-            }
-            else
-            {
+            Map<String,Object> post = lista.getDocuments().get(position).getData();
 
-                Glide.with(getContext()).load(post.get("authorPhotoUrl").toString()).circleCrop().into(holder.authorPhotoImageView);
+            String authorPhotoUrl = (String) post.get("authorPhotoUrl");
+
+            if (authorPhotoUrl == null || authorPhotoUrl.isEmpty()) {
+                Glide.with(holder.itemView.getContext())
+                        .load(R.drawable.user)
+                        .circleCrop()
+                        .into(holder.authorPhotoImageView);
+            } else {
+                Glide.with(getContext()).load(authorPhotoUrl).circleCrop().into(holder.authorPhotoImageView);
             }
+
             holder.authorTextView.setText(post.get("author").toString());
             holder.contentTextView.setText(post.get("content").toString());
 

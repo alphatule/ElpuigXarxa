@@ -1,6 +1,12 @@
 package com.alex.elpuigxarxa;
 
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
+
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
@@ -10,45 +16,41 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-import androidx.navigation.NavController;
-
 import com.google.android.material.snackbar.Snackbar;
+
+import org.jetbrains.annotations.Nullable;
 
 import io.appwrite.Client;
 import io.appwrite.coroutines.CoroutineCallback;
 import io.appwrite.exceptions.AppwriteException;
 import io.appwrite.services.Account;
 
-
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link RegisterFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class RegisterFragment extends Fragment {
+
+    NavController navController;
     private EditText usernameEditText, emailEditText, passwordEditText;
     private Button registerButton;
     Client client;
 
-    NavController navController;
+    public RegisterFragment() {
+    }
 
-    @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_register, container, false);
     }
 
-
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        navController = Navigation.findNavController(view);
+
         usernameEditText = view.findViewById(R.id.usernameEditText);
         emailEditText = view.findViewById(R.id.emailEditText);
         passwordEditText = view.findViewById(R.id.passwordEditText);
 
         registerButton = view.findViewById(R.id.registerButton);
+
         registerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -57,8 +59,7 @@ public class RegisterFragment extends Fragment {
         });
     }
 
-
-    private void crearCuenta() {
+    void crearCuenta() {
         if (!validarFormulario()) {
             return;
         }
@@ -78,8 +79,9 @@ public class RegisterFragment extends Fragment {
                             Snackbar.make(requireView(), "Error: " + error.toString(), Snackbar.LENGTH_LONG).show();
                             return;
                         }
+                        // Creamos la sesión con el nuevo usuario
                         account.createEmailPasswordSession(emailEditText.getText().toString(), // email
-                                passwordEditText.getText().toString(), //password
+                                passwordEditText.getText().toString(), // password
                                 new CoroutineCallback<>((result2, error2) -> {
                                     if (error2 != null) {
                                         Snackbar.make(requireView(), "Error: " + error2.toString(), Snackbar.LENGTH_LONG).show();
@@ -116,6 +118,4 @@ public class RegisterFragment extends Fragment {
         }
         return valid;
     }
-
-
 }

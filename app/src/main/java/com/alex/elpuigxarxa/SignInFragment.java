@@ -3,7 +3,6 @@ package com.alex.elpuigxarxa;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
@@ -20,38 +19,42 @@ import android.widget.ProgressBar;
 
 import com.google.android.material.snackbar.Snackbar;
 
+import org.jetbrains.annotations.Nullable;
+
 import io.appwrite.Client;
 import io.appwrite.coroutines.CoroutineCallback;
 import io.appwrite.services.Account;
 
-
 public class SignInFragment extends Fragment {
+
     NavController navController;
-    Client client;
-    Account account;
 
     private EditText emailEditText, passwordEditText;
     private Button emailSignInButton;
     private LinearLayout signInForm;
     private ProgressBar signInProgressBar;
+    Client client;
+    Account account;
 
-    @Nullable
+    public SignInFragment() {
+    }
+
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_sign_in, container, false);
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle
-            savedInstanceState) {
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         navController = Navigation.findNavController(view);
+
         view.findViewById(R.id.gotoCreateAccountTextView).setOnClickListener(new View.OnClickListener() {
-             @Override
-             public void onClick(View view) {
-                 navController.navigate(R.id.registerFragment);
-             }
-         });
+            @Override
+            public void onClick(View view) {
+                navController.navigate(R.id.registerFragment);
+            }
+        });
 
         emailEditText = view.findViewById(R.id.emailEditText);
         passwordEditText = view.findViewById(R.id.passwordEditText);
@@ -64,19 +67,15 @@ public class SignInFragment extends Fragment {
         client.setProject(getString(R.string.APPWRITE_PROJECT_ID));
         account = new Account(client);
 
-        account.getSession(
-                "current", // sessionId
+        account.getSession("current", // sessionId
                 new CoroutineCallback<>((result, error) -> {
                     if (error != null) {
                         error.printStackTrace();
                         return;
                     }
-                        // Si ya estamos logeados, pasamos a Home
-                    if(result != null)
-                        mainHandler.post(() -> actualizarUI("Ok"));
-                })
-        );
-
+// Si ya estamos logeados, pasamos a Home
+                    if (result != null) mainHandler.post(() -> actualizarUI("Ok"));
+                }));
         emailSignInButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -90,15 +89,12 @@ public class SignInFragment extends Fragment {
         signInProgressBar.setVisibility(View.VISIBLE);
         Account account = new Account(client);
         Handler mainHandler = new Handler(Looper.getMainLooper());
-        account.createEmailPasswordSession(
-                emailEditText.getText().toString(), // email
+        account.createEmailPasswordSession(emailEditText.getText().toString(), // email
                 passwordEditText.getText().toString(), // password
                 new CoroutineCallback<>((result, error) -> {
                     if (error != null) {
                         Snackbar.make(requireView(), "Error: " + error.toString(), Snackbar.LENGTH_LONG).show();
-                    }
-                    else
-                    {
+                    } else {
                         System.out.println("Sesión creada para el usuario:" + result.toString());
                         mainHandler.post(() -> actualizarUI("Ok"));
                     }
@@ -106,13 +102,12 @@ public class SignInFragment extends Fragment {
                         signInForm.setVisibility(View.VISIBLE);
                         signInProgressBar.setVisibility(View.GONE);
                     });
-                })
-        );
+                }));
     }
+
     private void actualizarUI(String currentUser) {
-        if(currentUser != null){
+        if (currentUser != null) {
             navController.navigate(R.id.homeFragment);
         }
     }
-
 }

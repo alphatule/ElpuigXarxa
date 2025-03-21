@@ -3,7 +3,6 @@ package com.alex.elpuigxarxa;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
@@ -18,33 +17,35 @@ import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 
+import org.jetbrains.annotations.Nullable;
+
 import io.appwrite.Client;
 import io.appwrite.coroutines.CoroutineCallback;
 import io.appwrite.exceptions.AppwriteException;
 import io.appwrite.services.Account;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link ProfileFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class ProfileFragment extends Fragment {
     NavController navController;
     ImageView photoImageView;
     TextView displayNameTextView, emailTextView;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup
-            container, Bundle savedInstanceState) {// Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_profile, container, false);
+            container, Bundle savedInstanceState) {
+// Inflate the layout for this fragment
+        return inflater.inflate(R.layout.fragment_profile, container,
+                false);
     }
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View view, @Nullable Bundle
+            savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        navController = Navigation.findNavController(view); //
+        navController = Navigation.findNavController(view);
         photoImageView = view.findViewById(R.id.photoImageView);
-        displayNameTextView = view.findViewById(R.id.displayNameTextView);
+        displayNameTextView =
+                view.findViewById(R.id.displayNameTextView);
         emailTextView = view.findViewById(R.id.emailTextView);
-        Client client = new Client(requireContext()).setProject(getString(R.string.APPWRITE_PROJECT_ID)); // Your project ID
+        Client client = new Client(requireContext())
+                .setProject(getString(R.string.APPWRITE_PROJECT_ID)); // Your project ID
         Account account = new Account(client);
         Handler mainHandler = new Handler(Looper.getMainLooper());
         try {
@@ -55,11 +56,11 @@ public class ProfileFragment extends Fragment {
                 }
                 displayNameTextView.setText(result.getName().toString());
                 emailTextView.setText(result.getEmail().toString());
-                mainHandler.post(()-> Glide.with(requireView()).load(R.drawable.user).into(photoImageView));
+                mainHandler.post(()->
+                        Glide.with(requireView()).load(R.drawable.user).into(photoImageView));
             }));
         } catch (AppwriteException e) {
             throw new RuntimeException(e);
         }
     }
-
 }

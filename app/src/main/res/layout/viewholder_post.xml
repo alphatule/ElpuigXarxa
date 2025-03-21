@@ -49,28 +49,41 @@
 
             <LinearLayout
                 android:id="@+id/likeLinearLayout"
-                android:layout_marginTop="10dp"
-                android:layout_width="wrap_content"
+                android:layout_width="190dp"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
                 android:orientation="horizontal">
 
                 <ImageView
                     android:id="@+id/likeImageView"
-                    app:srcCompat="@drawable/like_on"
-                    android:adjustViewBounds="true"
                     android:layout_width="20dp"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"/>
+                    android:layout_gravity="center_vertical"
+                    android:adjustViewBounds="true"
+                    app:srcCompat="@drawable/like_on" />
 
                 <TextView
                     android:id="@+id/numLikesTextView"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
                     android:layout_gravity="center_vertical"
-                    android:text="200K"/>
+                    android:layout_marginStart="4dp"
+                    android:text="200K" />
+
+                <ImageView
+                    android:id="@+id/deletePostImageView"
+                    android:layout_width="24dp"
+                    android:layout_height="30dp"
+                    android:layout_gravity="end"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginStart="100dp"
+                    android:contentDescription="Eliminar Post"
+                    android:src="@drawable/pen"
+                    android:visibility="gone"/>
+
 
             </LinearLayout>
+
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

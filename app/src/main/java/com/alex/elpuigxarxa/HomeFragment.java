@@ -100,7 +100,7 @@ public class HomeFragment extends Fragment {
     }
 
     class PostViewHolder extends RecyclerView.ViewHolder {
-        ImageView authorPhotoImageView, likeImageView, mediaImageView;
+        ImageView authorPhotoImageView, likeImageView, mediaImageView, deletePostImageView;
         TextView authorTextView, contentTextView, numLikesTextView;
 
         PostViewHolder(@NonNull View itemView) {
@@ -111,6 +111,7 @@ public class HomeFragment extends Fragment {
             authorTextView = itemView.findViewById(R.id.authorTextView);
             contentTextView = itemView.findViewById(R.id.contentTextView);
             numLikesTextView = itemView.findViewById(R.id.numLikesTextView);
+            deletePostImageView = itemView.findViewById(R.id.deletePostImageView);
         }
     }
 
@@ -133,6 +134,22 @@ public class HomeFragment extends Fragment {
             }
             holder.authorTextView.setText(post.get("author").toString());
             holder.contentTextView.setText(post.get("content").toString());
+
+            String postUserId = post.get("uid").toString();
+            if (postUserId.equals(userId)) {
+                holder.deletePostImageView.setVisibility(View.VISIBLE);
+            } else {
+                holder.deletePostImageView.setVisibility(View.GONE);
+            }
+
+            holder.deletePostImageView.setOnClickListener(v -> {
+                new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                        .setTitle("Eliminar Post")
+                        .setMessage("¿Seguro que deseas eliminar este post?")
+                        .setPositiveButton("Eliminar", (dialog, which) -> eliminarPost(post.get("$id").toString()))
+                        .setNegativeButton("Cancelar", null)
+                        .show();
+            });
 
             // Gestion de likes
             List<String> likes = (List<String>) post.get("likes");
@@ -192,6 +209,27 @@ public class HomeFragment extends Fragment {
             notifyDataSetChanged();
         }
     }
+
+    void eliminarPost(String postId) {
+        Databases databases = new Databases(client);
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+        databases.deleteDocument(
+                getString(R.string.APPWRITE_DATABASE_ID),
+                getString(R.string.APPWRITE_POSTS_COLLECTION_ID),
+                postId,
+                new CoroutineCallback<>((result, error) -> {
+                    if (error != null) {
+                        Snackbar.make(requireView(), "Error eliminando post: " + error.getMessage(), Snackbar.LENGTH_LONG).show();
+                        return;
+                    }
+                    mainHandler.post(() -> {
+                        Snackbar.make(requireView(), "Post eliminado correctamente", Snackbar.LENGTH_SHORT).show();
+                        obtenerPosts(); // Refrescar la lista
+                    });
+                })
+        );
+    }
+
 
     void obtenerPosts() {
         Databases databases = new Databases(client);

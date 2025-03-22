@@ -197,6 +197,15 @@ public class HomeFragment extends Fragment {
             } else {
                 holder.mediaImageView.setVisibility(View.GONE);
             }
+
+            // Manejar comentarios
+            holder.commentButton.setOnClickListener(v -> {
+                String commentText = holder.commentEditText.getText().toString().trim();
+                if (!commentText.isEmpty()) {
+                    guardarComentario(post.get("$id").toString(), null, commentText);
+                    holder.commentEditText.setText(""); // Limpiar campo después de comentar
+                }
+            });
         }
 
         @Override
@@ -250,4 +259,95 @@ public class HomeFragment extends Fragment {
             throw new RuntimeException(e);
         }
     }
+
+     // Comentarios
+
+    void guardarComentario(String postId, String parentCommentId, String content) {
+        Databases databases = new Databases(client);
+        Map<String, Object> data = new HashMap<>();
+        data.put("postId", postId);
+        data.put("parentCommentId", parentCommentId); // Si es un comentario principal, será null
+        data.put("author", displayNameTextView.getText().toString());
+        data.put("authorPhotoUrl", null); // Si en el futuro añades fotos, cambia esto
+        data.put("uid", userId);
+        data.put("content", content);
+        data.put("timestamp", Instant.now().toString());
+
+        databases.createDocument(
+                getString(R.string.APPWRITE_DATABASE_ID),
+                getString(R.string.APPWRITE_COMMENTS_COLLECTION_ID),
+                "unique()",
+                data,
+                new ArrayList<>(),
+                new CoroutineCallback<>((result, error) -> {
+                    if (error != null) {
+                        Snackbar.make(requireView(), "Error al publicar comentario", Snackbar.LENGTH_LONG).show();
+                        return;
+                    }
+                    Snackbar.make(requireView(), "Comentario publicado", Snackbar.LENGTH_SHORT).show();
+                    cargarComentarios(postId); // Refrescar comentarios
+                }));
+    }
+
+    void guardarComentario(String postId, String parentCommentId, String content) {
+        Databases databases = new Databases(client);
+        Map<String, Object> data = new HashMap<>();
+        data.put("postId", postId);
+        data.put("parentCommentId", parentCommentId);
+        data.put("author", displayNameTextView.getText().toString());
+        data.put("authorPhotoUrl", null);
+        data.put("uid", userId);
+        data.put("content", content);
+        data.put("timestamp", Instant.now().toString());
+
+        databases.createDocument(
+                getString(R.string.APPWRITE_DATABASE_ID),
+                getString(R.string.APPWRITE_COMMENTS_COLLECTION_ID),
+                "unique()",
+                data,
+                new ArrayList<>(),
+                new CoroutineCallback<>((result, error) -> {
+                    if (error != null) {
+                        Snackbar.make(requireView(), "Error al publicar comentario", Snackbar.LENGTH_LONG).show();
+                        return;
+                    }
+                    Snackbar.make(requireView(), "Comentario publicado", Snackbar.LENGTH_SHORT).show();
+                    cargarComentarios(postId);
+                }));
+    }
+
+    void cargarComentarios(String postId, PostViewHolder holder) {
+        Databases databases = new Databases(client);
+        databases.listDocuments(
+                getString(R.string.APPWRITE_DATABASE_ID),
+                getString(R.string.APPWRITE_COMMENTS_COLLECTION_ID),
+                List.of(Query.equal("postId", postId)),
+                new CoroutineCallback<>((result, error) -> {
+                    if (error != null) {
+                        Snackbar.make(requireView(), "Error al obtener comentarios", Snackbar.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    List<Comment> listaComentarios = new ArrayList<>();
+                    for (var doc : result.getDocuments()) {
+                        Map<String, Object> data = doc.getData();
+                        listaComentarios.add(new Comment(
+                                doc.getId(),
+                                data.get("postId").toString(),
+                                data.get("parentCommentId") != null ? data.get("parentCommentId").toString() : null,
+                                data.get("author").toString(),
+                                data.get("authorPhotoUrl") != null ? data.get("authorPhotoUrl").toString() : null,
+                                data.get("uid").toString(),
+                                data.get("content").toString(),
+                                data.get("timestamp").toString()
+                        ));
+                    }
+
+                    requireActivity().runOnUiThread(() -> {
+                        holder.commentAdapter.establecerLista(listaComentarios);
+                    });
+                }));
+    }
+
+
 }

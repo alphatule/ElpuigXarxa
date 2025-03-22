@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Handler;
@@ -14,6 +15,8 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -30,8 +33,10 @@ import java.util.List;
 import java.util.Map;
 
 import io.appwrite.Client;
+import io.appwrite.Query;
 import io.appwrite.coroutines.CoroutineCallback;
 import io.appwrite.exceptions.AppwriteException;
+import io.appwrite.models.Document;
 import io.appwrite.models.DocumentList;
 import io.appwrite.services.Account;
 import io.appwrite.services.Databases;
@@ -102,6 +107,10 @@ public class HomeFragment extends Fragment {
     class PostViewHolder extends RecyclerView.ViewHolder {
         ImageView authorPhotoImageView, likeImageView, mediaImageView, deletePostImageView;
         TextView authorTextView, contentTextView, numLikesTextView;
+        EditText commentEditText;
+        Button commentButton;
+        RecyclerView commentsRecyclerView;
+        CommentAdapter commentAdapter;
 
         PostViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -112,8 +121,20 @@ public class HomeFragment extends Fragment {
             contentTextView = itemView.findViewById(R.id.contentTextView);
             numLikesTextView = itemView.findViewById(R.id.numLikesTextView);
             deletePostImageView = itemView.findViewById(R.id.deletePostImageView);
+
+            commentEditText = itemView.findViewById(R.id.commentEditText);
+            commentButton = itemView.findViewById(R.id.commentButton);
+            commentsRecyclerView = itemView.findViewById(R.id.commentsRecyclerView);
+            commentsRecyclerView.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
+
+            commentAdapter = new CommentAdapter(parentCommentId -> {
+                // Manejar respuesta a comentarios
+                guardarComentario(parentCommentId);
+            });
+            commentsRecyclerView.setAdapter(commentAdapter);
         }
     }
+
 
     class PostsAdapter extends RecyclerView.Adapter<PostViewHolder> {
         DocumentList<Map<String, Object>> lista = null;
@@ -127,14 +148,19 @@ public class HomeFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull PostViewHolder holder, int position) {
             Map<String, Object> post = lista.getDocuments().get(position).getData();
+
+            // Cargar imagen de perfil del autor
             if (post.get("authorPhotoUrl") == null) {
                 holder.authorPhotoImageView.setImageResource(R.drawable.user);
             } else {
                 Glide.with(getContext()).load(post.get("authorPhotoUrl").toString()).circleCrop().into(holder.authorPhotoImageView);
             }
+
+            // Mostrar autor y contenido
             holder.authorTextView.setText(post.get("author").toString());
             holder.contentTextView.setText(post.get("content").toString());
 
+            // Mostrar o esconder botón de eliminar según el usuario logueado
             String postUserId = post.get("uid").toString();
             if (postUserId.equals(userId)) {
                 holder.deletePostImageView.setVisibility(View.VISIBLE);
@@ -151,23 +177,30 @@ public class HomeFragment extends Fragment {
                         .show();
             });
 
-            // Gestion de likes
+            // Gestión de likes
             List<String> likes = (List<String>) post.get("likes");
             if (likes.contains(userId)) holder.likeImageView.setImageResource(R.drawable.like_on);
             else holder.likeImageView.setImageResource(R.drawable.like_off);
+
             holder.numLikesTextView.setText(String.valueOf(likes.size()));
+
             holder.likeImageView.setOnClickListener(view -> {
                 Databases databases = new Databases(client);
                 Handler mainHandler = new Handler(Looper.getMainLooper());
-                List<String> nuevosLikes = likes;
+                List<String> nuevosLikes = new ArrayList<>(likes);
                 if (nuevosLikes.contains(userId)) nuevosLikes.remove(userId);
                 else nuevosLikes.add(userId);
+
                 Map<String, Object> data = new HashMap<>();
                 data.put("likes", nuevosLikes);
+
                 try {
-                    databases.updateDocument(getString(R.string.APPWRITE_DATABASE_ID), getString(R.string.APPWRITE_POSTS_COLLECTION_ID), post.get("$id").toString(), // documentId
-                            data, // data (optional)
-                            new ArrayList<>(), // permissions (optional)
+                    databases.updateDocument(
+                            getString(R.string.APPWRITE_DATABASE_ID),
+                            getString(R.string.APPWRITE_POSTS_COLLECTION_ID),
+                            post.get("$id").toString(),
+                            data,
+                            new ArrayList<>(),
                             new CoroutineCallback<>((result, error) -> {
                                 if (error != null) {
                                     error.printStackTrace();
@@ -175,7 +208,8 @@ public class HomeFragment extends Fragment {
                                 }
                                 System.out.println("Likes actualizados:" + result.toString());
                                 mainHandler.post(() -> obtenerPosts());
-                            }));
+                            })
+                    );
                 } catch (AppwriteException e) {
                     throw new RuntimeException(e);
                 }
@@ -187,8 +221,7 @@ public class HomeFragment extends Fragment {
                 if ("audio".equals(post.get("mediaType").toString())) {
                     Glide.with(requireView()).load(R.drawable.audio).centerCrop().into(holder.mediaImageView);
                 } else {
-                    Glide.with(requireView()).load(post.get("mediaUrl").toString()).centerCrop().into
-                            (holder.mediaImageView);
+                    Glide.with(requireView()).load(post.get("mediaUrl").toString()).centerCrop().into(holder.mediaImageView);
                 }
                 holder.mediaImageView.setOnClickListener(view -> {
                     appViewModel.postSeleccionado.setValue(post);
@@ -198,7 +231,10 @@ public class HomeFragment extends Fragment {
                 holder.mediaImageView.setVisibility(View.GONE);
             }
 
-            // Manejar comentarios
+            // **Nuevo: Cargar comentarios**
+            cargarComentarios(post.get("$id").toString(), holder);
+
+            // **Nuevo: Manejo de comentarios**
             holder.commentButton.setOnClickListener(v -> {
                 String commentText = holder.commentEditText.getText().toString().trim();
                 if (!commentText.isEmpty()) {
@@ -207,6 +243,7 @@ public class HomeFragment extends Fragment {
                 }
             });
         }
+
 
         @Override
         public int getItemCount() {
@@ -289,65 +326,51 @@ public class HomeFragment extends Fragment {
                 }));
     }
 
-    void guardarComentario(String postId, String parentCommentId, String content) {
-        Databases databases = new Databases(client);
-        Map<String, Object> data = new HashMap<>();
-        data.put("postId", postId);
-        data.put("parentCommentId", parentCommentId);
-        data.put("author", displayNameTextView.getText().toString());
-        data.put("authorPhotoUrl", null);
-        data.put("uid", userId);
-        data.put("content", content);
-        data.put("timestamp", Instant.now().toString());
-
-        databases.createDocument(
-                getString(R.string.APPWRITE_DATABASE_ID),
-                getString(R.string.APPWRITE_COMMENTS_COLLECTION_ID),
-                "unique()",
-                data,
-                new ArrayList<>(),
-                new CoroutineCallback<>((result, error) -> {
-                    if (error != null) {
-                        Snackbar.make(requireView(), "Error al publicar comentario", Snackbar.LENGTH_LONG).show();
-                        return;
-                    }
-                    Snackbar.make(requireView(), "Comentario publicado", Snackbar.LENGTH_SHORT).show();
-                    cargarComentarios(postId);
-                }));
-    }
-
     void cargarComentarios(String postId, PostViewHolder holder) {
         Databases databases = new Databases(client);
+
+        List<String> queries = new ArrayList<>();
+        queries.add(Query.Companion.equal("postId", List.of(postId))); // Si esto funciona, lo dejamos
+
         databases.listDocuments(
                 getString(R.string.APPWRITE_DATABASE_ID),
                 getString(R.string.APPWRITE_COMMENTS_COLLECTION_ID),
-                List.of(Query.equal("postId", postId)),
-                new CoroutineCallback<>((result, error) -> {
+                queries,
+                new CoroutineCallback<DocumentList>((result, error) -> {
                     if (error != null) {
-                        Snackbar.make(requireView(), "Error al obtener comentarios", Snackbar.LENGTH_LONG).show();
+                        Snackbar.make(requireView(), "Error al obtener comentarios: " + error.getMessage(), Snackbar.LENGTH_LONG).show();
                         return;
                     }
 
                     List<Comment> listaComentarios = new ArrayList<>();
-                    for (var doc : result.getDocuments()) {
-                        Map<String, Object> data = doc.getData();
-                        listaComentarios.add(new Comment(
-                                doc.getId(),
-                                data.get("postId").toString(),
-                                data.get("parentCommentId") != null ? data.get("parentCommentId").toString() : null,
-                                data.get("author").toString(),
-                                data.get("authorPhotoUrl") != null ? data.get("authorPhotoUrl").toString() : null,
-                                data.get("uid").toString(),
-                                data.get("content").toString(),
-                                data.get("timestamp").toString()
-                        ));
+                    try {
+                        for (var doc : result.getDocuments()) {
+                            Map<String, Object> data = doc.getData();
+
+                            String postIdData = (data.get("postId") != null) ? data.get("postId").toString() : "";
+                            String parentCommentId = (data.get("parentCommentId") != null) ? data.get("parentCommentId").toString() : null;
+                            String author = (data.get("author") != null) ? data.get("author").toString() : "Anónimo";
+                            String authorPhotoUrl = (data.get("authorPhotoUrl") != null) ? data.get("authorPhotoUrl").toString() : null;
+                            String uid = (data.get("uid") != null) ? data.get("uid").toString() : "";
+                            String content = (data.get("content") != null) ? data.get("content").toString() : "";
+                            String timestamp = (data.get("timestamp") != null) ? data.get("timestamp").toString() : "";
+
+                            listaComentarios.add(new Comment(doc.getId(), postIdData, parentCommentId, author, authorPhotoUrl, uid, content, timestamp));
+                        }
+                    } catch (Exception e) {
+                        Snackbar.make(requireView(), "Error procesando comentarios: " + e.getMessage(), Snackbar.LENGTH_LONG).show();
                     }
 
                     requireActivity().runOnUiThread(() -> {
                         holder.commentAdapter.establecerLista(listaComentarios);
                     });
-                }));
+                })
+        );
     }
+
+
+
+
 
 
 }

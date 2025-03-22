@@ -1,8 +1,10 @@
 package com.alex.elpuigxarxa;
 
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
@@ -112,6 +114,7 @@ public class HomeFragment extends Fragment {
         RecyclerView commentsRecyclerView;
         CommentAdapter commentAdapter;
 
+        @RequiresApi(api = Build.VERSION_CODES.O)
         PostViewHolder(@NonNull View itemView) {
             super(itemView);
             authorPhotoImageView = itemView.findViewById(R.id.authorPhotoImageView);
@@ -127,9 +130,8 @@ public class HomeFragment extends Fragment {
             commentsRecyclerView = itemView.findViewById(R.id.commentsRecyclerView);
             commentsRecyclerView.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
 
-            commentAdapter = new CommentAdapter(parentCommentId -> {
-                // Manejar respuesta a comentarios
-                guardarComentario(parentCommentId);
+            commentAdapter = new CommentAdapter((postId, parentCommentId, content) -> {
+                guardarComentario(postId, parentCommentId, content);
             });
             commentsRecyclerView.setAdapter(commentAdapter);
         }
@@ -299,13 +301,14 @@ public class HomeFragment extends Fragment {
 
      // Comentarios
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     void guardarComentario(String postId, String parentCommentId, String content) {
         Databases databases = new Databases(client);
         Map<String, Object> data = new HashMap<>();
         data.put("postId", postId);
-        data.put("parentCommentId", parentCommentId); // Si es un comentario principal, será null
+        data.put("parentCommentId", parentCommentId); // Si es una respuesta, guarda el ID del comentario padre
         data.put("author", displayNameTextView.getText().toString());
-        data.put("authorPhotoUrl", null); // Si en el futuro añades fotos, cambia esto
+        data.put("authorPhotoUrl", null); // Puedes cambiarlo si tienes URL de la foto
         data.put("uid", userId);
         data.put("content", content);
         data.put("timestamp", Instant.now().toString());
@@ -322,9 +325,11 @@ public class HomeFragment extends Fragment {
                         return;
                     }
                     Snackbar.make(requireView(), "Comentario publicado", Snackbar.LENGTH_SHORT).show();
-                    cargarComentarios(postId); // Refrescar comentarios
-                }));
+                    cargarComentarios(postId); // Refrescar comentarios después de responder
+                })
+        );
     }
+
 
     void cargarComentarios(String postId, PostViewHolder holder) {
         Databases databases = new Databases(client);

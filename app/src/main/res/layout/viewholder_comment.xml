@@ -18,10 +18,20 @@
         android:layout_height="wrap_content"
         android:text="Comentario"/>
 
+    <EditText
+        android:id="@+id/replyEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Escribe una respuesta..."
+        android:padding="8dp"
+        android:visibility="gone"/> <!-- Inicialmente oculto hasta que el usuario toque "Responder" -->
+
+
     <Button
         android:id="@+id/replyButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Responder"
         android:textSize="12sp"/>
+
 </LinearLayout>

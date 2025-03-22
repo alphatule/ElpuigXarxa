@@ -11,12 +11,15 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.appwrite.exceptions.AppwriteException;
+
 public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
     private List<Comment> listaComentarios = new ArrayList<>();
     private OnReplyClickListener replyClickListener;
 
+    // Definir interfaz con tres parámetros
     public interface OnReplyClickListener {
-        void onReplyClick(String parentCommentId);
+        void onReplyClick(String postId, String parentCommentId, String content) throws AppwriteException;
     }
 
     public CommentAdapter(OnReplyClickListener replyClickListener) {
@@ -41,10 +44,30 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         holder.authorTextView.setText(comentario.author);
         holder.contentTextView.setText(comentario.content);
 
+        // Mostrar campo para escribir la respuesta cuando el usuario toque "Responder"
         holder.replyButton.setOnClickListener(v -> {
-            replyClickListener.onReplyClick(comentario.id);
+            if (holder.replyEditText.getVisibility() == View.GONE) {
+                holder.replyEditText.setVisibility(View.VISIBLE);
+            } else {
+                holder.replyEditText.setVisibility(View.GONE);
+            }
+        });
+
+        // Enviar respuesta cuando el usuario escriba y presione el botón "Responder"
+        holder.replyButton.setOnClickListener(v -> {
+            String respuesta = holder.replyEditText.getText().toString().trim();
+            if (!respuesta.isEmpty() && replyClickListener != null) {
+                try {
+                    replyClickListener.onReplyClick(comentario.postId, comentario.id, respuesta);
+                } catch (AppwriteException e) {
+                    throw new RuntimeException(e);
+                }
+                holder.replyEditText.setText("");  // Limpiar después de enviar
+                holder.replyEditText.setVisibility(View.GONE);
+            }
         });
     }
+
 
     @Override
     public int getItemCount() {
@@ -53,12 +76,14 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
     static class CommentViewHolder extends RecyclerView.ViewHolder {
         TextView authorTextView, contentTextView;
+        EditText replyEditText;
         Button replyButton;
 
         public CommentViewHolder(@NonNull View itemView) {
             super(itemView);
             authorTextView = itemView.findViewById(R.id.authorTextView);
             contentTextView = itemView.findViewById(R.id.contentTextView);
+            replyEditText = itemView.findViewById(R.id.replyEditText);
             replyButton = itemView.findViewById(R.id.replyButton);
         }
     }

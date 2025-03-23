@@ -7,6 +7,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,9 +18,8 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     private List<Comment> listaComentarios = new ArrayList<>();
     private OnReplyClickListener replyClickListener;
 
-    // Definir interfaz con tres parámetros
     public interface OnReplyClickListener {
-        void onReplyClick(String postId, String parentCommentId, String content) throws AppwriteException;
+        void onReplyClick(String postId, String parentCommentId, String content);
     }
 
     public CommentAdapter(OnReplyClickListener replyClickListener) {
@@ -44,30 +44,33 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         holder.authorTextView.setText(comentario.author);
         holder.contentTextView.setText(comentario.content);
 
-        // Mostrar campo para escribir la respuesta cuando el usuario toque "Responder"
+        // Muestra el campo para escribir respuesta al presionar "Responder"
         holder.replyButton.setOnClickListener(v -> {
-            if (holder.replyEditText.getVisibility() == View.GONE) {
-                holder.replyEditText.setVisibility(View.VISIBLE);
-            } else {
-                holder.replyEditText.setVisibility(View.GONE);
-            }
+            holder.replyEditText.setVisibility(View.VISIBLE);
+            holder.sendReplyButton.setVisibility(View.VISIBLE);
         });
 
-        // Enviar respuesta cuando el usuario escriba y presione el botón "Responder"
-        holder.replyButton.setOnClickListener(v -> {
+        // Enviar respuesta
+        holder.sendReplyButton.setOnClickListener(v -> {
             String respuesta = holder.replyEditText.getText().toString().trim();
             if (!respuesta.isEmpty() && replyClickListener != null) {
-                try {
-                    replyClickListener.onReplyClick(comentario.postId, comentario.id, respuesta);
-                } catch (AppwriteException e) {
-                    throw new RuntimeException(e);
-                }
-                holder.replyEditText.setText("");  // Limpiar después de enviar
+                replyClickListener.onReplyClick(comentario.postId, comentario.id, respuesta);
+                holder.replyEditText.setText("");
                 holder.replyEditText.setVisibility(View.GONE);
+                holder.sendReplyButton.setVisibility(View.GONE);
             }
         });
-    }
 
+        // Cargar respuestas si existen
+        if (comentario.replies != null && !comentario.replies.isEmpty()) {
+            holder.repliesRecyclerView.setVisibility(View.VISIBLE);
+            CommentAdapter repliesAdapter = new CommentAdapter(replyClickListener);
+            holder.repliesRecyclerView.setAdapter(repliesAdapter);
+            repliesAdapter.establecerLista(comentario.replies);
+        } else {
+            holder.repliesRecyclerView.setVisibility(View.GONE);
+        }
+    }
 
     @Override
     public int getItemCount() {
@@ -77,7 +80,8 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     static class CommentViewHolder extends RecyclerView.ViewHolder {
         TextView authorTextView, contentTextView;
         EditText replyEditText;
-        Button replyButton;
+        Button replyButton, sendReplyButton;
+        RecyclerView repliesRecyclerView;
 
         public CommentViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -85,6 +89,9 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             contentTextView = itemView.findViewById(R.id.contentTextView);
             replyEditText = itemView.findViewById(R.id.replyEditText);
             replyButton = itemView.findViewById(R.id.replyButton);
+            sendReplyButton = itemView.findViewById(R.id.sendReplyButton);
+            repliesRecyclerView = itemView.findViewById(R.id.repliesRecyclerView);
+            repliesRecyclerView.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
         }
     }
 }

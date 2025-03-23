@@ -144,7 +144,10 @@ public class HomeFragment extends Fragment {
         @NonNull
         @Override
         public PostViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new PostViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.viewholder_post, parent, false));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                return new PostViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.viewholder_post, parent, false));
+            }
+            return null;
         }
 
         @Override
@@ -240,7 +243,9 @@ public class HomeFragment extends Fragment {
             holder.commentButton.setOnClickListener(v -> {
                 String commentText = holder.commentEditText.getText().toString().trim();
                 if (!commentText.isEmpty()) {
-                    guardarComentario(post.get("$id").toString(), null, commentText);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        guardarComentario(post.get("$id").toString(), null, commentText);
+                    }
                     holder.commentEditText.setText(""); // Limpiar campo después de comentar
                 }
             });
@@ -325,7 +330,7 @@ public class HomeFragment extends Fragment {
                         return;
                     }
                     Snackbar.make(requireView(), "Comentario publicado", Snackbar.LENGTH_SHORT).show();
-                    cargarComentarios(postId); // Refrescar comentarios después de responder
+                    cargarComentarios(postId, holder); // Refrescar comentarios después de responder
                 })
         );
     }
@@ -333,9 +338,8 @@ public class HomeFragment extends Fragment {
 
     void cargarComentarios(String postId, PostViewHolder holder) {
         Databases databases = new Databases(client);
-
         List<String> queries = new ArrayList<>();
-        queries.add(Query.Companion.equal("postId", List.of(postId))); // Si esto funciona, lo dejamos
+        queries.add(Query.Companion.equal("postId", List.of(postId)));
 
         databases.listDocuments(
                 getString(R.string.APPWRITE_DATABASE_ID),
@@ -348,20 +352,35 @@ public class HomeFragment extends Fragment {
                     }
 
                     List<Comment> listaComentarios = new ArrayList<>();
+                    Map<String, List<Comment>> repliesMap = new HashMap<>();
+
                     try {
                         for (var doc : result.getDocuments()) {
                             Map<String, Object> data = doc.getData();
+                            Comment comment = new Comment(
+                                    doc.getId(),
+                                    data.get("postId").toString(),
+                                    data.get("parentCommentId") != null ? data.get("parentCommentId").toString() : null,
+                                    data.get("author").toString(),
+                                    data.get("authorPhotoUrl") != null ? data.get("authorPhotoUrl").toString() : null,
+                                    data.get("uid").toString(),
+                                    data.get("content").toString(),
+                                    data.get("timestamp").toString()
+                            );
 
-                            String postIdData = (data.get("postId") != null) ? data.get("postId").toString() : "";
-                            String parentCommentId = (data.get("parentCommentId") != null) ? data.get("parentCommentId").toString() : null;
-                            String author = (data.get("author") != null) ? data.get("author").toString() : "Anónimo";
-                            String authorPhotoUrl = (data.get("authorPhotoUrl") != null) ? data.get("authorPhotoUrl").toString() : null;
-                            String uid = (data.get("uid") != null) ? data.get("uid").toString() : "";
-                            String content = (data.get("content") != null) ? data.get("content").toString() : "";
-                            String timestamp = (data.get("timestamp") != null) ? data.get("timestamp").toString() : "";
-
-                            listaComentarios.add(new Comment(doc.getId(), postIdData, parentCommentId, author, authorPhotoUrl, uid, content, timestamp));
+                            if (comment.parentCommentId == null) {
+                                listaComentarios.add(comment);
+                            } else {
+                                repliesMap.computeIfAbsent(comment.parentCommentId, k -> new ArrayList<>()).add(comment);
+                            }
                         }
+
+                        for (Comment c : listaComentarios) {
+                            if (repliesMap.containsKey(c.id)) {
+                                c.replies = repliesMap.get(c.id);
+                            }
+                        }
+
                     } catch (Exception e) {
                         Snackbar.make(requireView(), "Error procesando comentarios: " + e.getMessage(), Snackbar.LENGTH_LONG).show();
                     }
@@ -372,10 +391,5 @@ public class HomeFragment extends Fragment {
                 })
         );
     }
-
-
-
-
-
 
 }

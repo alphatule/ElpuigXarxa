@@ -14,24 +14,34 @@
 
     <TextView
         android:id="@+id/contentTextView"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Comentario"/>
-
-    <EditText
-        android:id="@+id/replyEditText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Escribe una respuesta..."
-        android:padding="8dp"
-        android:visibility="gone"/> <!-- Inicialmente oculto hasta que el usuario toque "Responder" -->
-
+        android:text="Respuesta"/>
 
     <Button
         android:id="@+id/replyButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Responder"
-        android:textSize="12sp"/>
+        android:text="Responder"/>
+
+    <EditText
+        android:id="@+id/replyEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:hint="Escribe una respuesta"/>
+
+    <Button
+        android:id="@+id/sendReplyButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enviar"
+        android:visibility="gone"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/repliesRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false"/>
 
 </LinearLayout>

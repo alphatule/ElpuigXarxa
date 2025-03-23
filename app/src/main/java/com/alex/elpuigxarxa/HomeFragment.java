@@ -28,10 +28,13 @@ import com.google.android.material.snackbar.Snackbar;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import io.appwrite.Client;
@@ -113,6 +116,7 @@ public class HomeFragment extends Fragment {
         Button commentButton;
         RecyclerView commentsRecyclerView;
         CommentAdapter commentAdapter;
+        TextView timestampTextView;
 
         @RequiresApi(api = Build.VERSION_CODES.O)
         PostViewHolder(@NonNull View itemView) {
@@ -134,6 +138,8 @@ public class HomeFragment extends Fragment {
                 guardarComentario(postId, parentCommentId, content);
             });
             commentsRecyclerView.setAdapter(commentAdapter);
+
+            timestampTextView = itemView.findViewById(R.id.timestampTextView);
         }
     }
 
@@ -164,6 +170,10 @@ public class HomeFragment extends Fragment {
             // Mostrar autor y contenido
             holder.authorTextView.setText(post.get("author").toString());
             holder.contentTextView.setText(post.get("content").toString());
+            // Obtener y formatear la fecha del post
+            String timestamp = post.get("timestamp").toString();
+            String formattedDate = formatTimestamp(timestamp);
+            holder.timestampTextView.setText(formattedDate);
 
             // Mostrar o esconder botón de eliminar según el usuario logueado
             String postUserId = post.get("uid").toString();
@@ -268,6 +278,18 @@ public class HomeFragment extends Fragment {
         public void establecerLista(DocumentList<Map<String, Object>> lista) {
             this.lista = lista;
             notifyDataSetChanged();
+        }
+    }
+
+    // Método para formatear la fecha
+    private String formatTimestamp(String timestamp) {
+        try {
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault());
+            SimpleDateFormat outputFormat = new SimpleDateFormat("dd 'de' MMM 'a las' HH:mm", Locale.getDefault());
+            Date date = inputFormat.parse(timestamp);
+            return outputFormat.format(date);
+        } catch (Exception e) {
+            return "Fecha desconocida"; // Manejo de error si la fecha es inválida
         }
     }
 

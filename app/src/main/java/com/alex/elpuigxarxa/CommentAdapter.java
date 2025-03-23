@@ -9,8 +9,12 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import io.appwrite.exceptions.AppwriteException;
 
@@ -44,6 +48,9 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         holder.authorTextView.setText(comentario.author);
         holder.contentTextView.setText(comentario.content);
 
+        String formattedDate = formatTimestamp(comentario.timestamp);
+        holder.timestampTextView.setText(formattedDate);
+
         // Muestra el campo para escribir respuesta al presionar "Responder"
         holder.replyButton.setOnClickListener(v -> {
             holder.replyEditText.setVisibility(View.VISIBLE);
@@ -76,6 +83,18 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         }
     }
 
+    // Método para formatear la fecha
+    private String formatTimestamp(String timestamp) {
+        try {
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault());
+            SimpleDateFormat outputFormat = new SimpleDateFormat("dd 'de' MMM 'a las' HH:mm", Locale.getDefault());
+            Date date = inputFormat.parse(timestamp);
+            return outputFormat.format(date);
+        } catch (Exception e) {
+            return "Fecha desconocida"; // Manejo de error si la fecha es inválida
+        }
+    }
+
     @Override
     public int getItemCount() {
         return listaComentarios.size();
@@ -86,6 +105,8 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         EditText replyEditText;
         Button replyButton, sendReplyButton;
         RecyclerView repliesRecyclerView;
+        TextView timestampTextView;
+
 
         public CommentViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -96,6 +117,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             sendReplyButton = itemView.findViewById(R.id.sendReplyButton);
             repliesRecyclerView = itemView.findViewById(R.id.repliesRecyclerView);
             repliesRecyclerView.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
+            timestampTextView = itemView.findViewById(R.id.timestampTextView);
         }
     }
 }

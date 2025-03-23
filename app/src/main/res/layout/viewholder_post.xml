@@ -25,6 +25,14 @@
             android:paddingStart="10dp">
 
             <TextView
+                android:id="@+id/timestampTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/darker_gray"
+                android:textSize="12sp"
+                android:text="27 de ene a las 13:45"/>
+
+            <TextView
                 android:id="@+id/authorTextView"
                 style="@style/Base.TextAppearance.AppCompat.Small"
                 android:layout_width="wrap_content"

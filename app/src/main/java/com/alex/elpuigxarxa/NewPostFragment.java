@@ -5,12 +5,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
@@ -38,6 +40,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -162,7 +165,9 @@ public class NewPostFragment extends Fragment {
                     return;
                 }
                 if (mediaTipo == null) {
-                    guardarEnAppWrite(result, postContent, null);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        guardarEnAppWrite(result, postContent, null);
+                    }
                 } else {
                     pujaIguardarEnAppWrite(result, postContent);
                 }
@@ -172,6 +177,7 @@ public class NewPostFragment extends Fragment {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     void guardarEnAppWrite(User<Map<String, Object>> user, String content, String mediaUrl) {
         Handler mainHandler = new Handler(Looper.getMainLooper());
         // Crear instancia del servicio Databases
@@ -184,6 +190,7 @@ public class NewPostFragment extends Fragment {
         data.put("content", content);
         data.put("mediaType", mediaTipo);
         data.put("mediaUrl", mediaUrl);
+        data.put("timestamp", Instant.now().toString()); // ✅ Agregar timestamp
         // Crear el documento
         try {
             databases.createDocument(getString(R.string.APPWRITE_DATABASE_ID), getString(R.string.APPWRITE_POSTS_COLLECTION_ID), "unique()", // Generar un ID único automáticamente
@@ -223,7 +230,9 @@ public class NewPostFragment extends Fragment {
                     }
                     String downloadUrl = "https://cloud.appwrite.io/v1/storage/buckets/" + getString(R.string.APPWRITE_STORAGE_BUCKET_ID) + "/files/" + result.getId() + "/view?project=" + getString(R.string.APPWRITE_PROJECT_ID) + "&project=" + getString(R.string.APPWRITE_PROJECT_ID) + "&mode=admin";
                     mainHandler.post(() -> {
-                        guardarEnAppWrite(user, postText, downloadUrl);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            guardarEnAppWrite(user, postText, downloadUrl);
+                        }
                     });
                 }));
     }

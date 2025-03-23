@@ -86,12 +86,12 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     // Método para formatear la fecha
     private String formatTimestamp(String timestamp) {
         try {
-            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault());
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault());
             SimpleDateFormat outputFormat = new SimpleDateFormat("dd 'de' MMM 'a las' HH:mm", Locale.getDefault());
             Date date = inputFormat.parse(timestamp);
             return outputFormat.format(date);
         } catch (Exception e) {
-            return "Fecha desconocida"; // Manejo de error si la fecha es inválida
+            return "Fecha desconocida"; // Si el timestamp no es válido
         }
     }
 

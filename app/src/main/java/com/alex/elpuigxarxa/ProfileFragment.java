@@ -70,21 +70,24 @@ public class ProfileFragment extends Fragment {
                     error.printStackTrace();
                     return;
                 }
-                userId = result.getId();
-                displayNameTextView.setText(result.getName());
-                emailTextView.setText(result.getEmail());
 
-                // Obtener imagen de perfil desde Auth
+                userId = result.getId();
                 String profileImageUrl = result.getPrefs().getData().containsKey("profileImage")
                         ? result.getPrefs().getData().get("profileImage").toString()
                         : null;
 
-                if (profileImageUrl != null) {
-                    Glide.with(requireView()).load(profileImageUrl).into(photoImageView);
-                } else {
-                    photoImageView.setImageResource(R.drawable.user);
-                }
+                requireActivity().runOnUiThread(() -> {
+                    displayNameTextView.setText(result.getName());
+                    emailTextView.setText(result.getEmail());
+
+                    if (profileImageUrl != null) {
+                        Glide.with(requireView()).load(profileImageUrl).into(photoImageView);
+                    } else {
+                        photoImageView.setImageResource(R.drawable.user);
+                    }
+                });
             }));
+
 
         } catch (AppwriteException e) {
             throw new RuntimeException(e);

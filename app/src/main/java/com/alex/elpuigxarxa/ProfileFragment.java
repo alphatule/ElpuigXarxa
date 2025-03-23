@@ -68,6 +68,7 @@ public class ProfileFragment extends Fragment {
         databases = new Databases(client);
 
         Handler mainHandler = new Handler(Looper.getMainLooper());
+
         try {
             account.get(new CoroutineCallback<>((result, error) -> {
                 if (error != null) {
@@ -75,7 +76,8 @@ public class ProfileFragment extends Fragment {
                     return;
                 }
 
-                System.out.println("DEBUG: Datos de usuario obtenidos de Auth → " + result.getPrefs().getData());
+                userId = result.getId(); // ✅ Guardar el userId correctamente
+                System.out.println("DEBUG: userId obtenido → " + userId);
 
                 String profileImageUrl = result.getPrefs().getData().containsKey("profileImage")
                         ? result.getPrefs().getData().get("profileImage").toString()
@@ -92,14 +94,13 @@ public class ProfileFragment extends Fragment {
                     }
                 });
             }));
-
         } catch (AppwriteException e) {
             throw new RuntimeException(e);
         }
 
-        // Botón para cambiar la foto de perfil
         changePhotoButton.setOnClickListener(v -> selectImageFromGallery());
     }
+
 
     // Seleccionar imagen desde la galería
     private void selectImageFromGallery() {
@@ -209,9 +210,14 @@ public class ProfileFragment extends Fragment {
     private void updatePostsImage(String imageUrl) {
         System.out.println("DEBUG: Intentando actualizar la imagen en los posts del usuario.");
 
+        if (userId == null) {
+            System.err.println("ERROR: userId es NULL. No se pueden actualizar los posts.");
+            return;
+        }
+
         Databases databases = new Databases(client);
         List<String> queries = new ArrayList<>();
-        queries.add(Query.Companion.equal("uid", List.of(userId))); // Encuentra los posts del usuario
+        queries.add(Query.Companion.equal("uid", List.of(userId))); // ✅ Buscar posts del usuario
 
         try {
             databases.listDocuments(
@@ -224,7 +230,17 @@ public class ProfileFragment extends Fragment {
                             return;
                         }
 
+                        if (result == null || result.getDocuments() == null || result.getDocuments().isEmpty()) {
+                            System.out.println("DEBUG: No se encontraron posts para actualizar.");
+                            return;
+                        }
+
                         for (Document<Map<String, Object>> post : result.getDocuments()) {
+                            if (post == null || post.getId() == null) {
+                                System.err.println("ERROR: Se encontró un post nulo o sin ID.");
+                                continue;
+                            }
+
                             Map<String, Object> updateData = new HashMap<>();
                             updateData.put("authorPhotoUrl", imageUrl);
 
@@ -237,22 +253,21 @@ public class ProfileFragment extends Fragment {
                                         new ArrayList<>(),
                                         new CoroutineCallback<>((updateResult, updateError) -> {
                                             if (updateError != null) {
-                                                System.err.println("ERROR: No se pudo actualizar la imagen en un post → " + updateError.getMessage());
+                                                System.err.println("ERROR: No se pudo actualizar la imagen en el post con ID "
+                                                        + post.getId() + " → " + updateError.getMessage());
                                                 return;
                                             }
                                             System.out.println("DEBUG: Imagen actualizada en el post con ID → " + post.getId());
                                         })
                                 );
                             } catch (AppwriteException e) {
-                                throw new RuntimeException(e);
+                                System.err.println("ERROR: Excepción al actualizar post con ID " + post.getId() + " → " + e.getMessage());
                             }
                         }
                     })
             );
         } catch (AppwriteException e) {
-            throw new RuntimeException(e);
+            System.err.println("ERROR: Excepción al listar los documentos de los posts → " + e.getMessage());
         }
     }
-
-
 }

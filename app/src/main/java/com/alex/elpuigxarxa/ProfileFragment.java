@@ -155,18 +155,20 @@ public class ProfileFragment extends Fragment {
     private void updateProfileImage(String imageUrl) {
         System.out.println("DEBUG: Intentando actualizar imagen en Auth con URL → " + imageUrl);
 
+        Map<String, Object> prefs = new HashMap<>();
+        prefs.put("profileImage", imageUrl);
+
         try {
             account.updatePrefs(
-                    new HashMap<String, Object>() {{
-                        put("profileImage", imageUrl);
-                    }},
+                    prefs,
                     new CoroutineCallback<>((result, error) -> {
                         if (error != null) {
                             System.err.println("ERROR: No se pudo actualizar la imagen en Auth → " + error.getMessage());
                             return;
                         }
 
-                        System.out.println("DEBUG: Imagen de perfil actualizada en Auth con éxito.");
+                        System.out.println("DEBUG: Imagen de perfil actualizada en Auth con éxito. Resultado → " + result.getPrefs().getData());
+
                         requireActivity().runOnUiThread(() -> Glide.with(requireView()).load(imageUrl).into(photoImageView));
 
                         // Ahora actualizamos los posts del usuario
@@ -177,6 +179,7 @@ public class ProfileFragment extends Fragment {
             throw new RuntimeException(e);
         }
     }
+
 
 
     private File getFileFromUri(Uri uri) throws IOException {

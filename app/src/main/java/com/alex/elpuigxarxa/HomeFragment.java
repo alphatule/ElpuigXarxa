@@ -170,10 +170,13 @@ public class HomeFragment extends Fragment {
             // Mostrar autor y contenido
             holder.authorTextView.setText(post.get("author").toString());
             holder.contentTextView.setText(post.get("content").toString());
-            // Obtener y formatear la fecha del post
-            String timestamp = post.get("timestamp").toString();
-            String formattedDate = formatTimestamp(timestamp);
+            // Obtener, depurar y formatear la fecha del post
+            Object timestampObj = post.get("timestamp");  // Puede ser null
+            System.out.println("DEBUG: Valor de timestamp en BD → " + timestampObj);
+            String timestamp = timestampObj != null ? timestampObj.toString() : null;
+            String formattedDate = (timestamp != null) ? formatTimestamp(timestamp) : "Fecha desconocida";
             holder.timestampTextView.setText(formattedDate);
+
 
             // Mostrar o esconder botón de eliminar según el usuario logueado
             String postUserId = post.get("uid").toString();
@@ -284,14 +287,15 @@ public class HomeFragment extends Fragment {
     // Método para formatear la fecha
     private String formatTimestamp(String timestamp) {
         try {
-            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault());
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault());
             SimpleDateFormat outputFormat = new SimpleDateFormat("dd 'de' MMM 'a las' HH:mm", Locale.getDefault());
             Date date = inputFormat.parse(timestamp);
             return outputFormat.format(date);
         } catch (Exception e) {
-            return "Fecha desconocida"; // Manejo de error si la fecha es inválida
+            return "Fecha desconocida"; // Si el timestamp no es válido
         }
     }
+
 
     void eliminarPost(String postId) {
         Databases databases = new Databases(client);
@@ -318,9 +322,14 @@ public class HomeFragment extends Fragment {
         Databases databases = new Databases(client);
         Handler mainHandler = new Handler(Looper.getMainLooper());
         try {
-            databases.listDocuments(getString(R.string.APPWRITE_DATABASE_ID), // databaseId
+            // Agregar la ordenación por timestamp (descendente)
+            List<String> queries = new ArrayList<>();
+            queries.add(Query.Companion.orderDesc("timestamp"));
+
+            databases.listDocuments(
+                    getString(R.string.APPWRITE_DATABASE_ID), // databaseId
                     getString(R.string.APPWRITE_POSTS_COLLECTION_ID), // collectionId
-                    new ArrayList<>(), // queries (optional)
+                    queries,
                     new CoroutineCallback<>((result, error) -> {
                         if (error != null) {
                             Snackbar.make(requireView(), "Error al obtener los posts: " + error.toString(), Snackbar.LENGTH_LONG).show();
@@ -328,13 +337,15 @@ public class HomeFragment extends Fragment {
                         }
                         System.out.println(result.toString());
                         mainHandler.post(() -> adapter.establecerLista(result));
-                    }));
+                    })
+            );
         } catch (AppwriteException e) {
             throw new RuntimeException(e);
         }
     }
 
-     // Comentarios
+
+    // Comentarios
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     void guardarComentario(String postId, String parentCommentId, String content) throws AppwriteException {

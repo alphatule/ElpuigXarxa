@@ -362,9 +362,10 @@ public class HomeFragment extends Fragment {
                     }
 
                     List<Comment> listaComentarios = new ArrayList<>();
-                    Map<String, List<Comment>> repliesMap = new HashMap<>();
+                    Map<String, Comment> commentsMap = new HashMap<>();
 
                     try {
+                        // Primero, creamos los comentarios sin anidar
                         for (var doc : result.getDocuments()) {
                             Map<String, Object> data = doc.getData();
                             Comment comment = new Comment(
@@ -377,17 +378,18 @@ public class HomeFragment extends Fragment {
                                     data.get("content").toString(),
                                     data.get("timestamp").toString()
                             );
+                            commentsMap.put(comment.id, comment);
+                        }
 
+                        // Luego, estructuramos los comentarios anidados
+                        for (Comment comment : commentsMap.values()) {
                             if (comment.parentCommentId == null) {
                                 listaComentarios.add(comment);
                             } else {
-                                repliesMap.computeIfAbsent(comment.parentCommentId, k -> new ArrayList<>()).add(comment);
-                            }
-                        }
-
-                        for (Comment c : listaComentarios) {
-                            if (repliesMap.containsKey(c.id)) {
-                                c.replies = repliesMap.get(c.id);
+                                Comment parentComment = commentsMap.get(comment.parentCommentId);
+                                if (parentComment != null) {
+                                    parentComment.replies.add(comment);
+                                }
                             }
                         }
 
@@ -401,5 +403,6 @@ public class HomeFragment extends Fragment {
                 })
         );
     }
+
 
 }

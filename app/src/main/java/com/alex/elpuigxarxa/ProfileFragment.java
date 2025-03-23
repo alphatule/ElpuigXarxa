@@ -27,6 +27,10 @@ import io.appwrite.services.Account;
 import io.appwrite.services.Databases;
 import io.appwrite.services.Storage;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -71,7 +75,8 @@ public class ProfileFragment extends Fragment {
                     return;
                 }
 
-                userId = result.getId();
+                System.out.println("DEBUG: Datos de usuario obtenidos de Auth → " + result.getPrefs().getData());
+
                 String profileImageUrl = result.getPrefs().getData().containsKey("profileImage")
                         ? result.getPrefs().getData().get("profileImage").toString()
                         : null;
@@ -87,7 +92,6 @@ public class ProfileFragment extends Fragment {
                     }
                 });
             }));
-
 
         } catch (AppwriteException e) {
             throw new RuntimeException(e);
@@ -117,94 +121,135 @@ public class ProfileFragment extends Fragment {
 
     private void uploadProfileImage() {
         if (selectedImageUri == null) return;
-        File imageFile = new File(selectedImageUri.getPath());
 
-        storage.createFile(
-                getString(R.string.APPWRITE_STORAGE_BUCKET_ID),
-                "unique()",
-                InputFile.Companion.fromFile(imageFile),
-                new ArrayList<>(),
-                new CoroutineCallback<>((result, error) -> {
-                    if (error != null) {
-                        error.printStackTrace();
-                        return;
-                    }
+        try {
+            File imageFile = getFileFromUri(selectedImageUri);
 
-                    String imageUrl = "https://cloud.appwrite.io/v1/storage/buckets/" +
-                            getString(R.string.APPWRITE_STORAGE_BUCKET_ID) +
-                            "/files/" + result.getId() + "/view?project=" +
-                            getString(R.string.APPWRITE_PROJECT_ID);
+            storage.createFile(
+                    getString(R.string.APPWRITE_STORAGE_BUCKET_ID),
+                    "unique()",
+                    InputFile.Companion.fromFile(imageFile),
+                    new ArrayList<>(),
+                    new CoroutineCallback<>((result, error) -> {
+                        if (error != null) {
+                            error.printStackTrace();
+                            return;
+                        }
 
-                    try {
+                        String imageUrl = "https://cloud.appwrite.io/v1/storage/buckets/" +
+                                getString(R.string.APPWRITE_STORAGE_BUCKET_ID) +
+                                "/files/" + result.getId() + "/view?project=" +
+                                getString(R.string.APPWRITE_PROJECT_ID);
+
                         updateProfileImage(imageUrl);
-                    } catch (AppwriteException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-        );
+                    })
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 
     // **Actualizar imagen de perfil en Auth**
-    private void updateProfileImage(String imageUrl) throws AppwriteException {
-        account.updatePrefs(
-                new HashMap<String, Object>() {{
-                    put("profileImage", imageUrl);
-                }},
-                new CoroutineCallback<>((result, error) -> {
-                    if (error != null) {
-                        error.printStackTrace();
-                        return;
-                    }
-                    requireActivity().runOnUiThread(() -> Glide.with(requireView()).load(imageUrl).into(photoImageView));
-                    try {
+    private void updateProfileImage(String imageUrl) {
+        System.out.println("DEBUG: Intentando actualizar imagen en Auth con URL → " + imageUrl);
+
+        try {
+            account.updatePrefs(
+                    new HashMap<String, Object>() {{
+                        put("profileImage", imageUrl);
+                    }},
+                    new CoroutineCallback<>((result, error) -> {
+                        if (error != null) {
+                            System.err.println("ERROR: No se pudo actualizar la imagen en Auth → " + error.getMessage());
+                            return;
+                        }
+
+                        System.out.println("DEBUG: Imagen de perfil actualizada en Auth con éxito.");
+                        requireActivity().runOnUiThread(() -> Glide.with(requireView()).load(imageUrl).into(photoImageView));
+
+                        // Ahora actualizamos los posts del usuario
                         updatePostsImage(imageUrl);
-                    } catch (AppwriteException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-        );
+                    })
+            );
+        } catch (AppwriteException e) {
+            throw new RuntimeException(e);
+        }
     }
+
+
+    private File getFileFromUri(Uri uri) throws IOException {
+        InputStream inputStream = requireContext().getContentResolver().openInputStream(uri);
+        if (inputStream == null) {
+            throw new FileNotFoundException("No se pudo abrir el URI: " + uri);
+        }
+
+        String fileName = "temp_profile_image.jpg";
+        File tempFile = new File(requireContext().getCacheDir(), fileName);
+
+        FileOutputStream outputStream = new FileOutputStream(tempFile);
+        byte[] buffer = new byte[1024];
+        int length;
+        while ((length = inputStream.read(buffer)) > 0) {
+            outputStream.write(buffer, 0, length);
+        }
+
+        outputStream.close();
+        inputStream.close();
+        return tempFile;
+    }
+
 
 
     // Actualizar la imagen de perfil en los posts
-    private void updatePostsImage(String imageUrl) throws AppwriteException {
+    private void updatePostsImage(String imageUrl) {
+        System.out.println("DEBUG: Intentando actualizar la imagen en los posts del usuario.");
+
         Databases databases = new Databases(client);
         List<String> queries = new ArrayList<>();
         queries.add(Query.Companion.equal("uid", List.of(userId))); // Encuentra los posts del usuario
 
-        databases.listDocuments(
-                getString(R.string.APPWRITE_DATABASE_ID),
-                getString(R.string.APPWRITE_POSTS_COLLECTION_ID),
-                queries,
-                new CoroutineCallback<>((result, error) -> {
-                    if (error != null) {
-                        error.printStackTrace();
-                        return;
-                    }
-
-                    for (Document<Map<String, Object>> post : result.getDocuments()) {
-                        Map<String, Object> updateData = new HashMap<>();
-                        updateData.put("authorPhotoUrl", imageUrl);
-
-                        try {
-                            databases.updateDocument(
-                                    getString(R.string.APPWRITE_DATABASE_ID),
-                                    getString(R.string.APPWRITE_POSTS_COLLECTION_ID),
-                                    post.getId(),
-                                    updateData,
-                                    new ArrayList<>(),
-                                    new CoroutineCallback<>((updateResult, updateError) -> {
-                                        if (updateError != null) {
-                                            updateError.printStackTrace();
-                                        }
-                                    })
-                            );
-                        } catch (AppwriteException e) {
-                            throw new RuntimeException(e);
+        try {
+            databases.listDocuments(
+                    getString(R.string.APPWRITE_DATABASE_ID),
+                    getString(R.string.APPWRITE_POSTS_COLLECTION_ID),
+                    queries,
+                    new CoroutineCallback<>((result, error) -> {
+                        if (error != null) {
+                            System.err.println("ERROR: No se pudieron obtener los posts del usuario → " + error.getMessage());
+                            return;
                         }
-                    }
-                })
-        );
+
+                        for (Document<Map<String, Object>> post : result.getDocuments()) {
+                            Map<String, Object> updateData = new HashMap<>();
+                            updateData.put("authorPhotoUrl", imageUrl);
+
+                            try {
+                                databases.updateDocument(
+                                        getString(R.string.APPWRITE_DATABASE_ID),
+                                        getString(R.string.APPWRITE_POSTS_COLLECTION_ID),
+                                        post.getId(),
+                                        updateData,
+                                        new ArrayList<>(),
+                                        new CoroutineCallback<>((updateResult, updateError) -> {
+                                            if (updateError != null) {
+                                                System.err.println("ERROR: No se pudo actualizar la imagen en un post → " + updateError.getMessage());
+                                                return;
+                                            }
+                                            System.out.println("DEBUG: Imagen actualizada en el post con ID → " + post.getId());
+                                        })
+                                );
+                            } catch (AppwriteException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    })
+            );
+        } catch (AppwriteException e) {
+            throw new RuntimeException(e);
+        }
     }
+
 
 }

@@ -19,7 +19,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     private OnReplyClickListener replyClickListener;
 
     public interface OnReplyClickListener {
-        void onReplyClick(String postId, String parentCommentId, String content);
+        void onReplyClick(String postId, String parentCommentId, String content) throws AppwriteException;
     }
 
     public CommentAdapter(OnReplyClickListener replyClickListener) {
@@ -54,7 +54,11 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         holder.sendReplyButton.setOnClickListener(v -> {
             String respuesta = holder.replyEditText.getText().toString().trim();
             if (!respuesta.isEmpty() && replyClickListener != null) {
-                replyClickListener.onReplyClick(comentario.postId, comentario.id, respuesta);
+                try {
+                    replyClickListener.onReplyClick(comentario.postId, comentario.id, respuesta);
+                } catch (AppwriteException e) {
+                    throw new RuntimeException(e);
+                }
                 holder.replyEditText.setText("");
                 holder.replyEditText.setVisibility(View.GONE);
                 holder.sendReplyButton.setVisibility(View.GONE);

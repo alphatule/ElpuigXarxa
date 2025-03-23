@@ -237,14 +237,22 @@ public class HomeFragment extends Fragment {
             }
 
             // **Nuevo: Cargar comentarios**
-            cargarComentarios(post.get("$id").toString(), holder);
+            try {
+                cargarComentarios(post.get("$id").toString(), holder);
+            } catch (AppwriteException e) {
+                throw new RuntimeException(e);
+            }
 
             // **Nuevo: Manejo de comentarios**
             holder.commentButton.setOnClickListener(v -> {
                 String commentText = holder.commentEditText.getText().toString().trim();
                 if (!commentText.isEmpty()) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        guardarComentario(post.get("$id").toString(), null, commentText);
+                        try {
+                            guardarComentario(post.get("$id").toString(), null, commentText);
+                        } catch (AppwriteException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
                     holder.commentEditText.setText(""); // Limpiar campo después de comentar
                 }
@@ -307,7 +315,7 @@ public class HomeFragment extends Fragment {
      // Comentarios
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    void guardarComentario(String postId, String parentCommentId, String content) {
+    void guardarComentario(String postId, String parentCommentId, String content) throws AppwriteException {
         Databases databases = new Databases(client);
         Map<String, Object> data = new HashMap<>();
         data.put("postId", postId);
@@ -338,7 +346,7 @@ public class HomeFragment extends Fragment {
     }
 
 
-    void cargarComentarios(String postId, PostViewHolder holder) {
+    void cargarComentarios(String postId, PostViewHolder holder) throws AppwriteException {
         Databases databases = new Databases(client);
         List<String> queries = new ArrayList<>();
         queries.add(Query.Companion.equal("postId", List.of(postId)));
@@ -347,7 +355,7 @@ public class HomeFragment extends Fragment {
                 getString(R.string.APPWRITE_DATABASE_ID),
                 getString(R.string.APPWRITE_COMMENTS_COLLECTION_ID),
                 queries,
-                new CoroutineCallback<DocumentList>((result, error) -> {
+                new CoroutineCallback<DocumentList<Map<String, Object>>>((result, error) -> {
                     if (error != null) {
                         Snackbar.make(requireView(), "Error al obtener comentarios: " + error.getMessage(), Snackbar.LENGTH_LONG).show();
                         return;

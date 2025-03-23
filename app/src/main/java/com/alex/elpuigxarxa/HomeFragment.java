@@ -330,7 +330,9 @@ public class HomeFragment extends Fragment {
                         return;
                     }
                     Snackbar.make(requireView(), "Comentario publicado", Snackbar.LENGTH_SHORT).show();
-                    cargarComentarios(postId, holder); // Refrescar comentarios después de responder
+//                    cargarComentarios(postId); // Refrescar comentarios después de responder
+
+                    requireActivity().runOnUiThread(this::obtenerPosts); // Refrescar todos los posts
                 })
         );
     }

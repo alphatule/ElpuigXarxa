@@ -38,7 +38,7 @@ El Puig Xarxa is a simple social network app for Android, developed using **Andr
 ## 🚀 Installation
 1. Clone this repository:
    ```sh
-   git clone https://github.com/your-repo/social-app.git
+   git clone https://github.com/alphatule/ElpuigXarxa.git
    ```
 2. Open the project in **Android Studio**.
 3. Configure **AppWrite API keys** in `strings.xml`.
